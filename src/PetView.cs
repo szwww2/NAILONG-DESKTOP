@@ -19,10 +19,10 @@ namespace NailongDesktop
                 Camera = new OrthographicCamera(new Point3D(0, 1.69, 8), new Vector3D(0, -0.26, -8), new Vector3D(0, 1, 0), 3.10)
             };
             var stage = new Model3DGroup();
-            stage.Children.Add(new AmbientLight(Color.FromRgb(111, 111, 114)));
-            stage.Children.Add(new DirectionalLight(Color.FromRgb(206, 198, 183), new Vector3D(0.55, -0.68, -0.95)));
-            stage.Children.Add(new DirectionalLight(Color.FromRgb(100, 111, 135), new Vector3D(-0.91, -0.26, -0.46)));
-            stage.Children.Add(new DirectionalLight(Color.FromRgb(69, 67, 60), new Vector3D(0.12, -0.29, 1)));
+            stage.Children.Add(new AmbientLight(Color.FromRgb(122, 111, 96)));
+            stage.Children.Add(new DirectionalLight(Color.FromRgb(189, 181, 164), new Vector3D(0.50, -0.74, -1.0)));
+            stage.Children.Add(new DirectionalLight(Color.FromRgb(103, 102, 92), new Vector3D(-0.90, -0.26, -0.70)));
+            stage.Children.Add(new DirectionalLight(Color.FromRgb(83, 77, 63), new Vector3D(-0.30, -0.47, 1)));
             stage.Children.Add(model.Model);
             viewport.Children.Add(new ModelVisual3D { Content = stage });
             Children.Add(effects);

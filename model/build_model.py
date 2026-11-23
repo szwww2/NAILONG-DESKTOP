@@ -12,6 +12,7 @@ import bpy
 import bmesh
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 import numpy as np
 
 
@@ -45,6 +46,12 @@ def classic_proportions(co):
     if z < -.35:
         z = -.35 + (z + .35) * .66
     return Vector((x, y, z))
+
+
+def arm_clearance(co):
+    x, y, z = co
+    inset = .074 * (1 - smooth(.105, .249, z))
+    return Vector((x + (inset if x >= 0 else -inset), y, z))
 
 
 def paint(name, color):
@@ -168,29 +175,48 @@ def prepare(source):
     welded = bmesh.new()
     welded.from_mesh(pet.data)
     bmesh.ops.delete(welded, geom=[f for f in welded.faces if f.material_index in (2, 3)], context="FACES")
+    bmesh.ops.delete(welded, geom=[f for f in welded.faces if all(abs(v.co.x) < .0002 for v in f.verts)],
+                     context="FACES_ONLY")
     bmesh.ops.delete(welded, geom=[v for v in welded.verts if not v.link_faces], context="VERTS")
     for face in welded.faces:
         face.material_index = 0
     bmesh.ops.remove_doubles(welded, verts=list(welded.verts), dist=.00085)
-    soft_detail = [v for v in welded.verts if (abs(v.co.x) < .022 and -.35 < v.co.z < .87)
-                   or (v.co.y > .07 and .737 < v.co.z < .816 and .05 < abs(v.co.x) < .138)]
-    for _ in range(5):
-        bmesh.ops.smooth_vert(welded, verts=soft_detail, factor=.40, use_axis_x=False, use_axis_y=True, use_axis_z=True)
+    boundaries = [e for e in welded.edges if e.is_boundary]
+    bmesh.ops.holes_fill(welded, edges=boundaries, sides=0)
     bmesh.ops.recalc_face_normals(welded, faces=list(welded.faces))
     welded.to_mesh(pet.data)
     welded.free()
-    detail = pet.vertex_groups.new(name="Face detail")
-    for v in pet.data.vertices:
-        x, y, z = v.co
-        if abs(x) < 0.15 and y > .13 and .61 < z < .72:
-            detail.add([v.index], 1, "REPLACE")
+
+    # Move the forearms out of contact with the torso for remeshing. The rest bones
+    # get the same offset, and the animation brings the arms back to the belly.
+    source_arms = arm_regions(pet)
+    source_points = KDTree(len(pet.data.vertices))
+    for vertex in pet.data.vertices:
+        if vertex.index in source_arms:
+            vertex.co = arm_clearance(vertex.co)
+        source_points.insert(vertex.co, vertex.index)
+    source_points.balance()
+
+    skin = pet.data.materials[0]
+    pet.data.remesh_voxel_size = .011
+    pet.data.use_remesh_preserve_volume = True
+    bpy.ops.object.voxel_remesh()
+    pet.data.materials.clear()
+    pet.data.materials.append(skin)
+
+    # Soften the remeshed surface evenly before adding facial features or skin weights.
+    smooth_body = pet.modifiers.new("Round the surface", "LAPLACIANSMOOTH")
+    smooth_body.iterations = 5
+    smooth_body.lambda_factor = .42
+    smooth_body.lambda_border = .18
+    smooth_body.use_volume_preserve = True
+    smooth_body.use_normalized = True
+    bpy.ops.object.modifier_apply(modifier=smooth_body.name)
     modifier = pet.modifiers.new("Desktop mesh", "DECIMATE")
-    modifier.ratio = .105
-    modifier.vertex_group = detail.name
-    modifier.invert_vertex_group = True
-    modifier.vertex_group_factor = 12
+    modifier.ratio = .22
     bpy.ops.object.modifier_apply(modifier=modifier.name)
-    pet.vertex_groups.remove(pet.vertex_groups["Face detail"])
+    for face in pet.data.polygons:
+        face.use_smooth = True
 
     face_patches(pet)
 
@@ -198,22 +224,25 @@ def prepare(source):
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=radians(68), island_margin=.008)
     bpy.ops.object.mode_set(mode="OBJECT")
-    return pet
+    arms = {v.index for v in pet.data.vertices if source_points.find(v.co)[1] in source_arms}
+    return pet, arms
 
 
 def recolor_skin(pet, arms):
     name = "Nailong skin tones"
     layer = pet.data.color_attributes.new(name=name, type="FLOAT_COLOR", domain="POINT")
-    yellow = Vector((.87, .58, .088))
-    cream = Vector((.94, .81, .61))
-    brown = Vector((.120, .075, .037))
+    amber = Vector((.79, .43, .073))
+    gold = Vector((.93, .65, .152))
+    cream = Vector((.939, .815, .626))
+    brown = Vector((.115, .072, .036))
     for v in pet.data.vertices:
         x, y, z = v.co
         tone = (x / .306) ** 2 + ((z + .032) / .306) ** 2
-        belly = (1 - smooth(.75, 1.13, tone)) * smooth(.110, .247, y)
+        belly = (1 - smooth(.73, 1.19, tone)) * smooth(.110, .247, y)
         fingers = 1 - smooth(-.25, -.12, z) if v.index in arms else 0
         toes = 1 - smooth(-.955, -.855, z)
-        layer.data[v.index].color = (*yellow.lerp(cream, belly).lerp(brown, max(fingers, toes)), 1)
+        base = amber.lerp(gold, smooth(-.59, .63, z))
+        layer.data[v.index].color = (*base.lerp(cream, belly).lerp(brown, max(fingers, toes)), 1)
     material = pet.data.materials[0]
     nodes = material.node_tree.nodes
     bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
@@ -258,13 +287,13 @@ def bake(pet, destination):
     atlas_pixels = np.ones((ALBEDO_SIZE, width, 4), dtype=np.float32)
     atlas_pixels[:, :ALBEDO_SIZE] = rgba.reshape(ALBEDO_SIZE, ALBEDO_SIZE, 4)
     swatches = {}
-    materials = list(pet.data.materials)[4:]
+    materials = list(pet.data.materials)[1:]
     for i, material in enumerate(materials):
         start = i * ALBEDO_SIZE // len(materials)
         end = (i + 1) * ALBEDO_SIZE // len(materials)
         rgb = np.asarray(material.diffuse_color[:3], dtype=np.float32)
         atlas_pixels[start:end, ALBEDO_SIZE:, :3] = np.where(rgb <= .0031308, rgb * 12.92, 1.055 * rgb ** (1 / 2.4) - .055)
-        swatches[4 + i] = ((ALBEDO_SIZE + SWATCH_WIDTH / 2) / width, (start + end) / (2 * ALBEDO_SIZE))
+        swatches[1 + i] = ((ALBEDO_SIZE + SWATCH_WIDTH / 2) / width, (start + end) / (2 * ALBEDO_SIZE))
     atlas = bpy.data.images.new("Nailong albedo", width=width, height=ALBEDO_SIZE, alpha=False)
     atlas.pixels.foreach_set(atlas_pixels.ravel())
     atlas.filepath_raw = str(destination)
@@ -329,6 +358,8 @@ def attach(pet, arms):
 
     def bone(name, head, tail, parent=None):
         result = data.edit_bones.new(name)
+        if name.startswith(("upper_arm.", "forearm.", "hand.")):
+            head, tail = arm_clearance(head), arm_clearance(tail)
         result.head, result.tail = classic_proportions(head), classic_proportions(tail)
         if parent:
             result.parent = data.edit_bones[parent]
@@ -352,6 +383,8 @@ def attach(pet, arms):
         bone("foot." + name, ankle, (sign * .272, .114, -.946), "shin." + name)
     bpy.ops.object.mode_set(mode="OBJECT")
     groups = {bone.name: pet.vertex_groups.new(name=bone.name) for bone in data.bones}
+    weight_table = np.zeros((len(pet.data.vertices), len(groups)), dtype=np.float64)
+    blend_region = np.zeros(len(pet.data.vertices), dtype=np.float64)
     for v in pet.data.vertices:
         x, y, z = v.co
         side = "L" if x >= 0 else "R"
@@ -378,8 +411,23 @@ def attach(pet, arms):
             "foot." + side: leg * knee * ankle,
         }
         for name, weight in weights.items():
-            if weight > .0001:
-                groups[name].add([v.index], weight, "REPLACE")
+            weight_table[v.index, groups[name].index] = weight
+        blend_region[v.index] = .58 * smooth(.18, .32, abs(x)) * smooth(.05, .20, z) * (1 - smooth(.34, .53, z))
+
+    # Diffuse the shoulder weights across neighboring vertices to remove the skin fold
+    # at the boundary between the forearm, shoulder and torso.
+    edges = np.asarray([tuple(edge.vertices) for edge in pet.data.edges], dtype=np.int32)
+    starts, ends = edges.T
+    starts, ends = np.concatenate((starts, ends)), np.concatenate((ends, starts))
+    degree = np.maximum(1, np.bincount(starts, minlength=len(weight_table)))[:, None]
+    for _ in range(11):
+        neighbors = np.zeros_like(weight_table)
+        np.add.at(neighbors, starts, weight_table[ends])
+        weight_table += (neighbors / degree - weight_table) * blend_region[:, None]
+    for group in groups.values():
+        for index in np.flatnonzero(weight_table[:, group.index] > .0001):
+            group.add([int(index)], float(weight_table[index, group.index]), "REPLACE")
+
     modifier = pet.modifiers.new("Nailong armature", "ARMATURE")
     modifier.object = rig
     modifier.use_deform_preserve_volume = True
@@ -389,6 +437,16 @@ def attach(pet, arms):
             point.co = classic_proportions(point.co)
     for v in pet.data.vertices:
         v.co = pet.data.shape_keys.reference_key.data[v.index].co
+
+    skin_vertices = {index for face in pet.data.polygons if face.material_index == 0 for index in face.vertices}
+    rounded = pet.vertex_groups.new(name="Skin curvature")
+    rounded.add(sorted(skin_vertices), 1, "REPLACE")
+    smooth_pose = pet.modifiers.new("Preserve round shoulders and elbows", "CORRECTIVE_SMOOTH")
+    smooth_pose.vertex_group = rounded.name
+    smooth_pose.factor = .62
+    smooth_pose.iterations = 10
+    smooth_pose.smooth_type = "LENGTH_WEIGHTED"
+    smooth_pose.use_pin_boundary = True
     return rig
 
 
@@ -569,8 +627,7 @@ def main():
     parser.add_argument("upstream", type=Path)
     args = parser.parse_args()
     media = ROOT.parent / "media"
-    pet = prepare(args.upstream.resolve())
-    arms = arm_regions(pet)
+    pet, arms = prepare(args.upstream.resolve())
     recolor_skin(pet, arms)
     swatches = bake(pet, media / "model-albedo.png")
     mouth, eyes = expressions(pet)

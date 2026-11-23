@@ -57,7 +57,7 @@ namespace NailongDesktop
             paint.Freeze();
             var material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(paint));
-            material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromRgb(55, 49, 37)), 29));
+            material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromRgb(39, 34, 24)), 19));
             material.Freeze();
             Model = new GeometryModel3D(mesh, material)
             {
