@@ -16,12 +16,13 @@ namespace NailongDesktop
             {
                 IsHitTestVisible = false,
                 ClipToBounds = false,
-                Camera = new OrthographicCamera(new Point3D(0, 1.65, 7), new Vector3D(0, -0.20, -7), new Vector3D(0, 1, 0), 3.18)
+                Camera = new OrthographicCamera(new Point3D(0, 1.69, 8), new Vector3D(0, -0.26, -8), new Vector3D(0, 1, 0), 3.10)
             };
             var stage = new Model3DGroup();
-            stage.Children.Add(new AmbientLight(Color.FromRgb(137, 137, 137)));
-            stage.Children.Add(new DirectionalLight(Color.FromRgb(186, 180, 167), new Vector3D(0.5, -0.8, -1)));
-            stage.Children.Add(new DirectionalLight(Color.FromRgb(67, 77, 87), new Vector3D(-0.8, 0.1, 0.3)));
+            stage.Children.Add(new AmbientLight(Color.FromRgb(111, 111, 114)));
+            stage.Children.Add(new DirectionalLight(Color.FromRgb(206, 198, 183), new Vector3D(0.55, -0.68, -0.95)));
+            stage.Children.Add(new DirectionalLight(Color.FromRgb(100, 111, 135), new Vector3D(-0.91, -0.26, -0.46)));
+            stage.Children.Add(new DirectionalLight(Color.FromRgb(69, 67, 60), new Vector3D(0.12, -0.29, 1)));
             stage.Children.Add(model.Model);
             viewport.Children.Add(new ModelVisual3D { Content = stage });
             Children.Add(effects);
@@ -42,7 +43,7 @@ namespace NailongDesktop
 
             public void Update(PetAction next, double time)
             {
-                if (next == action && (next == PetAction.Idle || next == PetAction.Walk || next == PetAction.Turn)) return;
+                if (next == action && next != PetAction.Sleep && next != PetAction.Feed) return;
                 action = next;
                 elapsed = time;
                 InvalidateVisual();

@@ -48,11 +48,16 @@ namespace NailongDesktop
                 }
             }
 
-            var paint = new ImageBrush(LoadTexture());
+            var paint = new ImageBrush(LoadTexture())
+            {
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewport = new Rect(0, 0, 1, 1),
+                Stretch = Stretch.Fill
+            };
             paint.Freeze();
             var material = new MaterialGroup();
             material.Children.Add(new DiffuseMaterial(paint));
-            material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromRgb(35, 29, 20)), 28));
+            material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromRgb(55, 49, 37)), 29));
             material.Freeze();
             Model = new GeometryModel3D(mesh, material)
             {
@@ -65,7 +70,7 @@ namespace NailongDesktop
         public void SetPose(PetAction action, double seconds, int direction)
         {
             double target = direction == 1 ? -17 : 21;
-            if (action == PetAction.Laugh) target *= 1.65;
+            if (action == PetAction.Laugh) target += Math.Sign(target) * (5 + 5 * Math.Sin(seconds * 4.1));
             facing += (target - facing) * 0.24;
             double turn = Math.Max(0, Math.Min(1, seconds / PetArt.TurnSeconds));
             rotation.Angle = facing + (action == PetAction.Turn ? 360 * turn * turn * (3 - 2 * turn) : 0);

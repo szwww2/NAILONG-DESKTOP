@@ -27,7 +27,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 .\dist\NailongDesktop.exe
 ```
 
-`PetWindow` 处理 WPF 逐像素透明窗口、拖动阈值、动画状态和托盘菜单。`PetModel` 载入嵌入 EXE 的网格、纹理和动画姿态，在 Windows 的 3D 视口中插值渲染。`LaughSound` 离线合成笑声。窗口隐藏时暂停渲染，位置和选项保存到 `%LOCALAPPDATA%\NailongDesktop\settings.xml`。
+`PetWindow` 处理 WPF 逐像素透明窗口、拖动阈值、动画状态和托盘菜单。`PetModel` 载入嵌入 EXE 的网格、纹理和动画姿态，在 Windows 的 3D 视口中插值渲染。笑声音轨也内嵌在程序中，模型的张嘴幅度随声强变化。窗口隐藏时暂停渲染，位置和选项保存到 `%LOCALAPPDATA%\NailongDesktop\settings.xml`。
 
 ## 编辑 3D 模型
 
@@ -37,4 +37,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 - 非官方同人桌宠。角色为第七印象的奶龙。 [第七印象](https://www.nailoong.com/business/ipIncubation/)
 - 在 WeDai 的 Blender 模型基础上绑定骨骼、制作表情和动作。弯腰、捧腹、闭眼露齿以经典大笑表情包为动作参考。 [模型来源](https://github.com/bigdiu/naiwa-nailoong-blender-model) · [经典大笑参考](https://www.vgover.com/news/198094)
+- 笑声取自 craigsmith 发布的 CC0 真人笑声《R16-04-Man Laughing.wav》，经过剪裁、变速和响度处理。 [录音与授权](https://freesound.org/people/craigsmith/sounds/482787/)
 - 桌宠交互调研参考了 VPet 的陪伴与互动设计，透明窗口采用 WPF 的逐像素透明机制。 [VPet](https://github.com/LorisYounger/VPet) · [Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/api/system.windows.window.allowstransparency)

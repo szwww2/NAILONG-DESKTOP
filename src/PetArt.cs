@@ -13,7 +13,7 @@ namespace NailongDesktop
         public const double Height = 310;
         public const double LaughSeconds = 4.3;
         public const double TurnSeconds = 1.35;
-        private static readonly Brush Shadow = Solid(44, 39, 29, 20);
+        private static readonly Brush Shadow = ShadowBrush();
         private static readonly Brush Cream = Solid(255, 255, 242, 198);
         private static readonly Brush Ink = Solid(255, 79, 50, 28);
         private static readonly Brush Gold = Solid(255, 246, 191, 60);
@@ -25,7 +25,7 @@ namespace NailongDesktop
 
         public static void Draw(DrawingContext dc, PetAction action, double time)
         {
-            dc.DrawEllipse(Shadow, null, new Point(140, 272), 52, 6);
+            dc.DrawEllipse(Shadow, null, new Point(140, 284), 71, 8);
             if (action == PetAction.Feed)
             {
                 dc.PushOpacity(Math.Sin(Math.PI * Clamp(time / 2.1)));
@@ -39,15 +39,6 @@ namespace NailongDesktop
                 double drift = time * 0.55 % 1;
                 dc.PushOpacity(Math.Sin(Math.PI * drift));
                 Caption(dc, "Z z z", 188 + drift * 22, 49 - drift * 22, 10);
-                dc.Pop();
-            }
-            if (action == PetAction.Laugh)
-            {
-                double opacity = Clamp((time - 0.25) * 5) * Clamp((LaughSeconds - time) * 4);
-                if (opacity <= 0) return;
-                dc.PushOpacity(opacity);
-                Caption(dc, "哈哈哈哈！", 141, 20 + Math.Sin(time * 11) * 3, -6);
-                Spark(dc, 207, 58 + Math.Sin(time * 7) * 7);
                 dc.Pop();
             }
         }
@@ -77,6 +68,15 @@ namespace NailongDesktop
         }
 
         private static double Clamp(double value) { return Math.Max(0, Math.Min(value, 1)); }
+        private static Brush ShadowBrush()
+        {
+            Color center = Color.FromArgb(75, 28, 24, 23);
+            Color rim = Color.FromArgb(0, 28, 24, 23);
+            var brush = new RadialGradientBrush(center, rim);
+            brush.Freeze();
+            return brush;
+        }
+
 
         private static Brush Solid(byte alpha, byte red, byte green, byte blue)
         {

@@ -10,7 +10,7 @@
 | Sleep · 休息 | 114–149 |
 | Walk · 散步 | 150–161 |
 
-`build_model.py` 从上游模型重建工程，并导出桌宠使用的 `media/model.bin` 和 `media/model-albedo.png`。可在 Python 3.11 环境中安装 `bpy==5.0.1` 和 `numpy==1.26.4` 后执行。重新生成会覆盖上述产物和 `nailong.blend`，请先备份手动修改的工程。
+`build_model.py` 从上游模型重建工程，并导出桌宠使用的 `media/model.bin` 和 `media/model-albedo.png`。脚本读取 `media/laugh.wav` 的声强生成口型关键帧。可在 Python 3.11 环境中安装 `bpy==5.0.1` 和 `numpy==1.26.4` 后执行。重新生成会覆盖上述产物和 `nailong.blend`，请先备份手动修改的工程。
 
 ```powershell
 python model/build_model.py <上游的-nailong_colored.blend-路径>

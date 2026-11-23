@@ -19,8 +19,9 @@ $sources = Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*
 $icon = Join-Path $PSScriptRoot 'media\nailong.ico'
 $model = Join-Path $PSScriptRoot 'media\model.bin'
 $texture = Join-Path $PSScriptRoot 'media\model-albedo.png'
+$laugh = Join-Path $PSScriptRoot 'media\laugh.wav'
 & $compiler /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ /codepage:65001 "/out:$exe" `
     "/win32manifest:$PSScriptRoot\app.manifest" "/win32icon:$icon" "/resource:$model,Nailong.Model" "/resource:$texture,Nailong.Texture" `
-    /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll /reference:System.Xaml.dll @references @sources
+    "/resource:$laugh,Nailong.Laugh.wav" /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Xml.dll /reference:System.Xaml.dll @references @sources
 if ($LASTEXITCODE -ne 0) { throw "Compilation failed ($LASTEXITCODE)." }
 Write-Output $exe
