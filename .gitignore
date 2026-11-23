@@ -1,0 +1,5 @@
+/dist/
+/.vs/
+*.user
+__pycache__/
+*.blend1
